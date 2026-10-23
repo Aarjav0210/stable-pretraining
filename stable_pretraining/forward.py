@@ -407,9 +407,7 @@ def resa(self, batch: dict[str, Any], stage: str) -> dict[str, torch.Tensor]:
             - 'label': Labels if present (for probes/callbacks)
 
     Note:
-        Introduced in the ReSA paper :cite:`weng2025clustering`. Each view goes
-        through the backbone in its own call, so BatchNorm statistics are
-        computed per view as in the official implementation.
+        Introduced in the ReSA paper :cite:`weng2025clustering`.
 
     Example:
         ::

@@ -43,9 +43,7 @@ class ReSALoss(torch.nn.Module):
         batch, while the student side stays local and DDP's gradient averaging
         gives the global mean. Every rank must use the same local batch size.
 
-        The loss is computed in float32 with autocast disabled. The official
-        CIFAR code also trains entirely in float32; the official ImageNet code
-        runs this loss under fp16 autocast.
+        The loss is computed in float32 with autocast disabled.
     """
 
     def __init__(
@@ -80,8 +78,7 @@ class ReSALoss(torch.nn.Module):
                 "student_embedding and teacher_embedding must have the same shape, got "
                 f"{tuple(student_embedding.shape)} and {tuple(teacher_embedding.shape)}."
             )
-        # exp(S / 0.05) amplifies rounding error in S twentyfold, so the
-        # similarities must not be computed under fp16/bf16 autocast.
+        # exp(S / sinkhorn_temperature) amplifies rounding error, so stay in float32.
         with torch.amp.autocast(
             device_type=student_embedding.device.type, enabled=False
         ):

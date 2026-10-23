@@ -1,16 +1,12 @@
 """ReSA training on CIFAR-10 or CIFAR-100 with a ResNet-18.
 
-Follows the official CIFAR recipe (https://github.com/winci-ai/resa_cifar):
-a weak view (crop + flip) that also builds the soft labels and a strong view,
-a 2048-2048-512 projector, an EMA teacher (momentum 0.996 -> 1), SGD with
-learning rate 0.3 x batch/256 and weight decay 1e-4 on every parameter,
-2 warm-up epochs then cosine decay to 0.1 x the learning rate, 1000 epochs at
-batch 256. Paper (Table 1, ResNet-18, 1000 epochs): CIFAR-10 93.53 linear /
-93.02 k-NN, CIFAR-100 72.21 / 66.83.
+Follows the official CIFAR recipe (https://github.com/winci-ai/resa_cifar).
+Paper (Table 1, ResNet-18, 1000 epochs): CIFAR-10 93.53 linear / 93.02 k-NN,
+CIFAR-100 72.21 / 66.83.
 
 Usage:
     python benchmarks/cifar10/resa-resnet18.py
-    python benchmarks/cifar10/resa-resnet18.py --dataset cifar100  # or benchmarks/cifar100/resa-resnet18.py
+    python benchmarks/cifar10/resa-resnet18.py --dataset cifar100
     python benchmarks/cifar10/resa-resnet18.py --epochs 2 --limit-train-batches 20  # smoke test
 """
 
@@ -76,39 +72,30 @@ def parse_args():
 
 
 class ReSADiagnostics(pl.Callback):
-    """Log how the soft labels evolve during training.
+    """Log per-epoch statistics of the soft labels.
 
-    Each row of the soft-label matrix is one image's target: how its credit is
-    split over the images in the batch. Three per-epoch averages are logged:
+    Each row of the soft-label matrix is one image's target distribution over
+    the batch.
 
-    - ``diagonal_mass``: the credit an image keeps for itself (1 for one-hot
-      targets, 1/256 when it is spread evenly over a batch of 256).
-    - ``same_class_share``: of the credit an image gives to *other* images, the
-      fraction that lands on images of its own class. Chance is about
-      1 / num_classes; higher means the soft labels group images by class.
-    - ``target_entropy``: how spread out the soft labels are, from 0 (one-hot)
-      to log(batch size) (uniform). The cross-entropy loss equals this entropy
-      plus the KL divergence from the soft labels to the predictions, so the
-      loss never drops below it, and loss minus target_entropy is the part the
-      network can still reduce.
+    - ``diagonal_mass``: weight an image puts on itself (1 for one-hot targets).
+    - ``same_class_share``: fraction of the weight on other images that goes to
+      images of the same class (chance is about 1 / num_classes).
+    - ``target_entropy``: row entropy, a lower bound on the cross-entropy loss.
 
-    Labels are used only for these measurements, never for training. Assumes a
-    single process, where the assignment's columns are this batch's images.
+    Labels are used only for logging. Assumes a single process, so the soft
+    labels' columns are this batch's images.
     """
 
-    # Lightning calls this hook with all five arguments; only pl_module and outputs are used.
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         assignment = outputs.get("resa_assignment")
         if assignment is None or "label" not in outputs:
             return
         n = assignment.shape[0]
         labels = outputs["label"][:n]
-        # Indices 0..n-1, to address the diagonal.
         idx = torch.arange(n, device=assignment.device)
         off_diagonal = assignment.clone()
-        off_diagonal[idx, idx] = 0  # keep only the credit given to other images
+        off_diagonal[idx, idx] = 0
         same_class = (labels[:, None] == labels[None, :]).to(assignment.dtype)
-        # Per image: credit to same-class images / all credit to other images.
         share = (off_diagonal * same_class).sum(1) / off_diagonal.sum(1).clamp_min(
             1e-12
         )

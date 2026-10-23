@@ -242,7 +242,7 @@ METHOD_BUILDERS = {
 REFERENCE_LOSSES = {
     "simclr": ("fit/loss_epoch", 1.645321011543274),
     "byol": ("fit/loss_epoch", 1.822302222251892),
-    "resa": ("fit/loss_epoch", 2.295149326324463),  # captured on Linux, 2026-10-21
+    "resa": ("fit/loss_epoch", 2.295149326324463),  # captured on 2026-10-21
     "vicreg": ("fit/loss_epoch", 18.119741439819336),
     "barlow_twins": ("fit/loss_epoch", 1.7105509042739868),
     "supervised": ("validate/loss_step", 2.3338754177093506),
