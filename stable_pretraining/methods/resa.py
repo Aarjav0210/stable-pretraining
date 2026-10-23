@@ -104,7 +104,9 @@ class ReSA(Module):
         Pass the weakly augmented view (crop and flip only) as ``view1``: the
         soft labels are built from it. Use
         :class:`~stable_pretraining.callbacks.TeacherStudentCallback` to drive
-        the teacher EMA updates during training.
+        the teacher EMA updates during training. It updates the teacher every
+        step but recomputes the momentum once per epoch, so the momentum lags
+        the official code's per-iteration schedule by at most one epoch.
 
     Example::
 

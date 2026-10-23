@@ -195,6 +195,9 @@ def main():
         nn.Linear(2048, 512),
         nn.BatchNorm1d(512, affine=False),
     )
+    # TeacherStudentCallback updates the teacher every step but recomputes the
+    # momentum once per epoch; the official code recomputes it every iteration.
+    # They differ by at most ~6e-6 at 1000 epochs, so we keep the library's callback.
     ema = dict(warm_init=True, base_ema_coefficient=args.ema, final_ema_coefficient=1.0)
 
     steps_per_epoch = len(train_dataloader)
